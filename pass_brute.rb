@@ -41,51 +41,28 @@ def send_request(auth)
   end
 end#send_request
 
-#todo rescue ensure file close
-def found(auth,resp)
+#todo rescue ensure file closes
+def found(auth)
   file = File.new(auth,'w+');
   file.puts(Base64.decode64(auth));
   file.close();
-  #jsn = JSON.parse(resp.body);
-  #pp jsn;
-  #puts "\u{1f333} #{resp.to_hash}\n#{resp.code}\n"
 end#found
 
-def save_last(auth,resp)
-  file = File.new(auth,'w+');
-  file.puts(Base64.decode64(auth));
+def save_last(tried_creds)#needs base36 string, size:10
+  file = File.new(tried_creds,'w+');
+  file.puts(tried_creds+" #{Time.now}\u{0a}");
   file.close();
-  #jsn = JSON.parse(resp.body);
-  #pp jsn;
-  #puts "\u{1f333} #{resp.to_hash}\n#{resp.code}\n"
 end#save_last
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-success = false;
+flag = false;#thread will set flag every 6 min.
+set_flag_thread = Thread.new do
+  loop do
+    sleep(60*6);#every 6 minutes
+    flag = true;
+    puts "\u{1f6a9} #{Time.now} flag set\n"#🚩
+  end#loop
+end#logger_thread
 
 user_name       = ARGV[0];#llllddd:
 #base36 string
@@ -93,6 +70,7 @@ last_inspected  = ARGV[1];#cmd line arg or nil
 #@user_creds = (ARGV != nil)? ARGV[0] : login_creds;
 possible_pass_int = (last_inspected)? last_inspected.to_i(36) : 'a0a0aaaaaa'.to_i(36);
 
+success = false;
 until success do
   possible_pass_36 = possible_pass_int.to_s(36);
   auth = Base64.urlsafe_encode64(user_name+possible_pass_36);
@@ -101,54 +79,24 @@ until success do
   t = Thread.new do
     #Thread.current[:resp] = send_request(auth);
     resp = send_request(auth);
+    #binding.irb;
     if (resp.code == '200')
       success = true;
-      found(auth,resp);
+      found(auth);
+      sleep(2);
     end
-    puts "\u{1f33a} #{user_name} #{possible_pass_36}\n"#🌺
-    puts "\u{1f333} #{resp.to_hash}\n#{resp.code}\n"#🌳
+    # puts "\u{1f33a} #{user_name}#{possible_pass_36}\n"#🌺
+    # puts "\u{1f333} #{resp.to_hash}\n#{resp.code}\n"#🌳
 
   end#thread
-
-  # if (success)
-  #   break;
-  # end
-
   t.join(3);
+
+  if flag
+    save_last(possible_pass_36);
+    flag = false;
+  end#if
+
   possible_pass_int +=1;#integer expected
 
+end#until loop
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-end#loop
