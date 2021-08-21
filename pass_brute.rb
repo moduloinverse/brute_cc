@@ -48,19 +48,19 @@ def found(auth)
   file.close();
 end#found
 
-def save_last(tried_creds)#needs base36 string, size:10
+def save_last(tried_creds,counter)#needs base36 string, size:10
   file = File.new(tried_creds,'w+');
-  file.puts(tried_creds+" #{Time.now}\u{0a}");
+  file.puts(tried_creds+" #{counter} #{Time.now}\u{0a}");
   file.close();
 end#save_last
 
-
+counter = 0;
 flag = false;#thread will set flag every 6 min.
 set_flag_thread = Thread.new do
   loop do
-    sleep(60*6);#every 6 minutes
+    sleep(60*5);#every 5 minutes
     flag = true;
-    puts "\u{1f6a9} #{Time.now} flag set\n"#🚩
+    puts "\u{1f6a9} #{counter} #{Time.now} flag set\n"#🚩
   end#loop
 end#logger_thread
 
@@ -68,35 +68,41 @@ user_name       = ARGV[0];#llllddd:
 #base36 string
 last_inspected  = ARGV[1];#cmd line arg or nil
 #@user_creds = (ARGV != nil)? ARGV[0] : login_creds;
-possible_pass_int = (last_inspected)? last_inspected.to_i(36) : 'a0a0aaaaaa'.to_i(36);
+possible_pass_int = (last_inspected)? last_inspected.to_i(36) : 'zzzzzzzzz'.to_i(36);
 
 success = false;
+
 until success do
   possible_pass_36 = possible_pass_int.to_s(36);
   auth = Base64.urlsafe_encode64(user_name+possible_pass_36);
+  #unless REGEX6.match?(possible_pass_36)
+  #  possible_pass_int +=1;
+  #  next;
+  #end
 
 
   t = Thread.new do
     #Thread.current[:resp] = send_request(auth);
     resp = send_request(auth);
+    counter +=1;
     #binding.irb;
     if (resp.code == '200')
       success = true;
       found(auth);
       sleep(2);
     end
-    # puts "\u{1f33a} #{user_name}#{possible_pass_36}\n"#🌺
-    # puts "\u{1f333} #{resp.to_hash}\n#{resp.code}\n"#🌳
+    #puts "\u{1f33a} #{user_name}#{possible_pass_36}\n"#🌺
+    #puts "\u{1f333} #{resp.to_hash}\n#{resp.code}\n"#🌳
 
   end#thread
   t.join(3);
 
   if flag
-    save_last(possible_pass_36);
+    save_last(possible_pass_36,counter);
     flag = false;
+    counter = 0;
   end#if
 
   possible_pass_int +=1;#integer expected
 
 end#until loop
-
